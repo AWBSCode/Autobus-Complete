@@ -1,26 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace Autobus_Complete
 {
     public partial class FrmGame : Form
     {
-
-        int rounds = 0;
-        int mainRndTime = 0;
-        int rndTime = 0;
-        int currentRnd = 1;
-        int points = 0;
-        char letter = 'A';
+        private const int PointsPerCorrectAnswer = 10;
+        private int rounds;
+        private int mainRndTime;
+        private int rndTime;
+        private int currentRnd = 1;
+        private int points = 0;
+        private char letter = 'A';
+        private string chosenLetter = "";
 
         public FrmGame(int rounds, int rndTime)
         {
@@ -34,63 +28,78 @@ namespace Autobus_Complete
 
         private void WriteTime()
         {
-            int minutes = (int)(rndTime / 60);
-            int remainingSeconds = (int)(rndTime % 60);
+            int minutes = rndTime / 60;
+            int remainingSeconds = rndTime % 60;
 
-            string mins = minutes >= 10 ? minutes.ToString() : '0' + minutes.ToString();
-            string secs = remainingSeconds >= 10 ? remainingSeconds.ToString() : '0' + remainingSeconds.ToString();
+            string mins = minutes.ToString("D2");
+            string secs = remainingSeconds.ToString("D2");
 
             lblTimer.Text = $"{mins}:{secs}";
         }
 
-        private void GetLetterRandomly() {
+        private void GetLetterRandomly()
+        {
             Random rd = new Random();
-            letter = (char)rd.Next(65, 91);
+            letter = (char)rd.Next(65, 91); // ASCII codes for A-Z
             lblLetter.Text = $"Letter {letter}";
+
+            if (IsLetterChosenBefore())
+            {
+                GetLetterRandomly();
+            } else
+            {
+                chosenLetter += letter;
+            }
+        }
+
+        private bool IsLetterChosenBefore()
+        {
+            if (chosenLetter.Contains(letter))
+                return true;
+             
+            return false;
         }
 
         private void btnCompleteRound_Click(object sender, EventArgs e)
         {
-            // get all fields
-            System.Windows.Forms.TextBox[] textBoxes = { tbPerson, tbAnimal, tbPlant, tbCountry };
-
-            // check all fields if starts with the letter;
-            foreach (var tb in textBoxes)
-            {
-                if (tb.Text.Length <= 0)
-                {
-                    continue;
-                }
-
-                if (Char.ToUpper(tb.Text[0]) != letter) {
-                    tb.Focus();
-                    errorProvider1.SetError(tb, $"The word should be started with the letter {letter}");
-                    return;
-                } else
-                {
-                    UpdatePoints();
-                }
-            }
+            CheckTextBoxes();
 
             if (currentRnd == rounds)
             {
                 ShowResults();
-                return;
             }
-            // update current round and reset all the fields
-            ResetRound();
-
+            else
+            {
+                ResetRound();
+            }
         }
 
-        private void UpdatePoints(int updateValue = 10) {
+        private void CheckTextBoxes()
+        {
+            TextBox[] textBoxes = { tbPerson, tbAnimal, tbPlant, tbCountry };
+
+            foreach (var tb in textBoxes)
+            {
+                if (string.IsNullOrWhiteSpace(tb.Text)) continue;
+
+                if (Char.ToUpper(tb.Text[0]) != letter) continue;
+                else
+                {
+                    UpdatePoints();
+                }
+            }
+        }
+
+        private void UpdatePoints(int updateValue = PointsPerCorrectAnswer)
+        {
             points += updateValue;
-            lblPoints.Text = points.ToString() + " Points";
+            lblPoints.Text = $"{points} Points";
         }
 
         private void ShowResults()
         {
             this.Hide();
-            Form frmResult = new FrmResult(points, rounds);
+            FrmResult frmResult = new FrmResult(points, rounds);
             frmResult.Closed += (s, args) => this.Close();
             frmResult.Show();
         }
@@ -100,7 +109,7 @@ namespace Autobus_Complete
             currentRnd++;
             lblRound.Text = $"Round #{currentRnd}";
 
-            System.Windows.Forms.TextBox[] textBoxes = { tbPerson, tbAnimal, tbPlant, tbCountry };
+            TextBox[] textBoxes = { tbPerson, tbAnimal, tbPlant, tbCountry };
             foreach (var tb in textBoxes)
             {
                 tb.Text = "";
@@ -115,13 +124,14 @@ namespace Autobus_Complete
         {
             rndTime--;
 
-            if (rndTime == 0)
+            if (rndTime <= 0)
             {
                 btnRoundComplete.PerformClick();
-                return;
             }
-
-            WriteTime();
+            else
+            {
+                WriteTime();
+            }
         }
     }
 }
